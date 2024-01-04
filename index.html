@@ -301,7 +301,7 @@
 				document.getElementById('client-id').value = data.client_id;
 				localStorage.setItem('clientSecret', data.client_secret);
 				document.getElementById('client-secret').value = data.client_secret;
-				authorizeUser(baseURL, data.client_id);
+				setTimeout( function() { authorizeUser(baseURL, data.client_id); }, 1500 );
 			})
 			.catch(log.errorReceived);
 		}
