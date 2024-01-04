@@ -133,7 +133,7 @@
 	</div>
 	<div id="authorization-status"></div>
 	<button id="authorize">Authorize</button>
-
+	<input type="reset" id="delete-local" value="Delete Local Storage Data">
 	<details id="detailsblock"><summary>Authorization Data</summary>
 		<div id="authorizaton-data">
 			<label for="redirect-uri">Redirect URI:</label>
@@ -379,6 +379,9 @@
 		} );
 		document.getElementById('authorize').addEventListener('click', function() {
 			const baseURL = document.getElementById('base-url');
+			if ( ! /^https?:\/\//.test( baseURL.value ) ) {
+				baseURL.value = 'https://' + baseURL.value;
+			}
 			if ( ! baseURL.checkValidity() ) {
 				baseURL.reportValidity();
 				return;
