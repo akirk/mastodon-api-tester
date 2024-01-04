@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>Mastodon API Tester</title>
+	<style>
+		.api-endpoint {
+			cursor: pointer;
+			font-weight: bold;
+			color: blue;
+			text-decoration: underline;
+			margin-bottom: 10px;
+		}
+		summary {
+			cursor: pointer;
+		}
+		details div {
+			border-left: 3px solid #aaa;
+			padding-left: 1em;
+		}
+		details div label {
+			display: inline-block;
+			width: 10em;
+			line-height: 1.5em;
+		}
+		#request-log {
+			margin-top: 20px;
+			padding: 10px;
+			border: 1px solid #ccc;
+			background-color: #f9f9f9;
+			border-radius: 4px;
+		}
+		img.hover {
+			display: none;
+			position: absolute;
+		}
+		a:hover img.hover {
+			display: block;
+		}
+		tt.response-headers,tt.meta {
+			color: #999;
+		}
+		tt#access-token-meta {
+			margin-left: 1em;
+			line-height: 1;
+		}
+		tt {
+			white-space: pre;
+			display: block;
+			margin-bottom: 1em;
+		}
+		.header-key {
+			font-weight: bold;
+		}
+		.header-value {
+		}
+		.path {
+			color: #098658;
+		}
+		.number {
+			color: #098658;
+		}
+
+		.string {
+			color: #a31515;
+		}
+
+		.boolean {
+			color: #0c9fc7;
+		}
+
+		.null {
+			color: #bf6630;
+		}
+
+		.key {
+			color: #000000;
+			font-weight: bold;
+		}
+
+		.string-image {
+			position: relative;
+		}
+
+	</style>
+</head>
+
+<body>
+	<h1>Mastodon API Tester</h1>
+
+	<label for="base-url">Mastodon Instance:</label>
+	<input type="text" size="50" id="base-url" value="">
+	<span id="authorization-status"></span>
+	<button id="authorize">Authorize</button>
+
+	<details><summary>Behind the scenes data</summary>
+<div>
+		<label for="redirect-uri">Redirect URI:</label>
+		<input type="text" size="50" id="redirect-uri">
+		<br/>
+
+		<label for="client-id">Client ID:</label>
+		<input type="text" size="50" id="client-id">
+		<br/>
+
+		<label for="client-secret">Client Secret:</label>
+		<input type="text" size="50" id="client-secret">
+		<button id="get-access-token">Get New Access Token</button>
+		<br/>
+
+		<label for="access-token">Access Token:</label>
+		<input type="text" size="50" id="access-token">
+		<tt id="access-token-meta"></tt>
+		<br/>
+
+		<input type="reset" id="reset">
+		</div>
+	</details>
+
+	<h2>API Endpoints:</h2>
+	<div class="api-endpoint">/api/v1/accounts/verify_credentials</div>
+	<div class="api-endpoint">/api/v1/timelines/home</div>
+
+	<h2>Request Log:</h2>
+	<div id="request-log"></div>
+
+	<script>
+
+		function createApp(baseURL) {
+			localStorage.setItem('baseURL', baseURL);
+			localStorage.setItem('redirectURI', window.location.href);
+			document.getElementById('redirect-uri').value = window.location.href;
+			fetch(`${baseURL}/api/v1/apps`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json'
+				},
+				body: JSON.stringify({
+					client_name: 'Mastodon API Tester',
+					redirect_uris: window.location.href,
+					scopes: 'read write follow'
+				})
+			})
+			.then(response => response.json())
+			.then(data => {
+				localStorage.setItem('clientID', data.client_id);
+				document.getElementById('client-id').value = data.client_id;
+				localStorage.setItem('clientSecret', data.client_secret);
+				document.getElementById('client-secret').value = data.client_secret;
+				authorizeUser(baseURL, data.client_id);
+			})
+			.catch(error => console.error('Error creating app:', error));
+		}
+
+		function authorizeUser(baseURL, clientID) {
+			const redirectURI = encodeURIComponent(localStorage.getItem('redirectURI') );
+			const authURL = `${baseURL}/oauth/authorize?client_id=${clientID}&redirect_uri=${redirectURI}&response_type=code&scope=read%20write`;
+			window.location.href = authURL;
+		}
+
+		function getAccessToken(baseURL, clientID, clientSecret, code) {
+			fetch(`${baseURL}oauth/token`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json'
+				},
+				body: JSON.stringify({
+					client_id: clientID,
+					client_secret: clientSecret,
+					redirect_uri: localStorage.getItem('redirectURI'),
+					code: code,
+					grant_type: 'authorization_code'
+				})
+			})
+			.then(response => response.json())
+			.then(data => {
+				if ( ! data.access_token ) {
+					console.error('Error getting access token:', data);
+					return;
+				}
+				let currentTime = new Date();
+				currentTime.setSeconds(currentTime.getSeconds() + data.expires_in);
+				data.expires_at = currentTime.toLocaleString();
+				currentTime = new Date( data.created_at * 1000 );
+				data.created_at = currentTime.toLocaleString();
+
+				localStorage.setItem('accessTokenMeta', JSON.stringify( data, null, "\n" ) );
+				localStorage.setItem('accessToken', data.access_token);
+				document.getElementById('access-token').value = data.access_token;
+
+				const urlParams = new URLSearchParams(window.location.search);
+				urlParams.delete('code');
+				history.replaceState(null, null, `${window.location.pathname}?${urlParams.toString()}`);
+
+				document.getElementById('authorization-status').textContent = 'Authorized.';
+				document.getElementById('authorize').textContent = 'Re-Authorize';
+				document.getElementById('access-token-meta').innerHTML = jsonSyntaxHighlight( localStorage.getItem('accessTokenMeta') );
+
+			})
+			.catch(error => console.error('Error getting access token:', error));
+		}
+
+		function displayRequestLog(request, response) {
+			const div = document.createElement('div');
+			const requestLog = document.getElementById('request-log');
+			div.innerHTML = `<pre>${request}</pre><pre>${response}</pre><hr>`;
+			if ( requestLog.childNodes.length ) {
+				requestLog.insertBefore( div, requestLog.childNodes[0] );
+			} else {
+				requestLog.appendChild( div );
+			}
+		}
+
+		document.getElementById('authorize').addEventListener('click', function() {
+			const baseURL = document.getElementById('base-url').value;
+			if ( ! baseURL ) {
+				return;
+			}
+			const clientID = document.getElementById('client-id').value;
+			if ( ! clientID ) {
+				return createApp(baseURL);
+			}
+
+			return authorizeUser(baseURL, clientID);
+		});
+
+		document.getElementById('get-access-token').addEventListener('click', function() {
+			const baseURL = document.getElementById('base-url').value;
+			const clientID = document.getElementById('client-id').value;
+			authorizeUser(baseURL, clientID);
+		});
+
+		document.getElementById('reset').addEventListener('click', function() {
+			document.getElementById('client-id').value = '';
+			document.getElementById('client-secret').value = '';
+			document.getElementById('access-token').value = '';
+		});
+
+		document.addEventListener('DOMContentLoaded', function() {
+			const baseURL = localStorage.getItem('baseURL');
+			const redirectURI = localStorage.getItem('redirectURI');
+			const clientID = localStorage.getItem('clientID');
+			const clientSecret = localStorage.getItem('clientSecret');
+			const accessToken = localStorage.getItem('accessToken');
+			document.getElementById('base-url').value = baseURL;
+			document.getElementById('redirect-uri').value = redirectURI;
+			document.getElementById('client-id').value = clientID;
+			document.getElementById('client-secret').value = clientSecret;
+			document.getElementById('access-token').value = accessToken;
+			document.getElementById('access-token-meta').innerHTML = jsonSyntaxHighlight( localStorage.getItem('accessTokenMeta') );
+			if ( baseURL && clientID && clientSecret ) {
+				const urlParams = new URLSearchParams( window.location.search );
+				if ( urlParams.get('code') ) {
+					return getAccessToken( baseURL, clientID, clientSecret, urlParams.get('code') );
+				}
+			}
+
+			if ( accessToken ) {
+				document.getElementById('authorization-status').textContent = 'Authorized.';
+				document.getElementById('authorize').textContent = 'Re-Authorize';
+				return;
+			}
+
+		});
+		function htmlescape( text ) {
+			return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		}
+
+
+		document.addEventListener("mouseover", (event) => {
+		  if (event.target.classList.contains('display-image')) {
+		    const link = event.target;
+
+		    const img = document.createElement("img");
+		    img.className = 'hover'
+		    img.src = link.href;
+
+		    link.appendChild(img);
+		  }
+		});
+
+		function jsonSyntaxHighlight(json) {
+			if (typeof json !== 'string') {
+				json = JSON.stringify(json, undefined, 2);
+			}
+
+			let displayImage = '';
+			return htmlescape( json ).replace(
+				/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(\.\d+)?([eE][+-]?\d+)?)/g,
+				function (match) {
+					let cls = 'number';
+					if (/^"/.test(match)) {
+						if (/:$/.test(match)) {
+							cls = 'key';
+							displayImage = /^"(avatar|header)(_static)?":$/.test( match ) ? ' display-image' : '';
+						} else {
+							cls = 'string';
+							if (/^"(https?:\/\/[^"]+)"$/.test(match)) {
+								return `<a href="${match.slice(1, -1)}" class="url${displayImage}" target="_blank">${match}</a>`;
+							}
+						}
+					} else if (/true|false/.test(match)) {
+						cls = 'boolean';
+					} else if (/null/.test(match)) {
+						cls = 'null';
+					}
+					return '<span class="' + cls + '">' + match + '</span>';
+				}
+				);
+		}
+
+		document.addEventListener('click', function(event) {
+			if (event.target.classList.contains('api-endpoint')) {
+				const baseURL = document.getElementById('base-url').value.replace(/\/+$/, '');
+				const endpoint = event.target.dataset.endpoint || event.target.textContent;
+				const method = event.target.dataset.method || 'GET';
+				const accessToken = localStorage.getItem('accessToken');
+				const requestURL = `${baseURL}${endpoint}`;
+
+				const div = document.createElement('div');
+				const request = document.createElement('tt');
+				request.className = 'request';
+				div.appendChild( request );
+				const meta = document.createElement('tt');
+				meta.className = 'meta';
+				div.appendChild( meta );
+				const responseHeaders = document.createElement('tt');
+				responseHeaders.className = 'response-headers';
+				div.appendChild( responseHeaders );
+				const response = document.createElement('tt');
+				response.className = 'response';
+				div.appendChild( response );
+				request.innerHTML =
+				'<span class="method">' + htmlescape( method ) + '</span> <span class="path">' + htmlescape( endpoint ) + '</span><br/>' +
+				'<span class="header-key">Server</span>: <span class="header-value">' + htmlescape( baseURL ) + '</span><br/>' +
+				'<span class="header-key">Authorization</span>: <span class="header-value">Bearer ' + htmlescape( accessToken ) + '</span><br/>' +
+				'<span class="header-key">Content-Type</span>: <span class="header-value">application/json</span><br/>' +
+				'<span class="header-key">Accept</span>: <span class="header-value">application/json</span>';
+				const requestLog = document.getElementById('request-log');
+				if ( requestLog.childNodes.length ) {
+					requestLog.insertBefore( div, requestLog.childNodes[0] );
+				} else {
+					requestLog.appendChild( div );
+				}
+
+				function responseReceived( data ) {
+					clearInterval( intervalId );
+					const currentTime = new Date().getTime();
+					const seconds = Math.floor((currentTime - startTime) / 100) / 10;
+					meta.textContent = `-- Response received after ${seconds} seconds`;
+
+					response.innerHTML = jsonSyntaxHighlight( data );
+				}
+
+				const startTime = new Date().getTime();
+
+				const intervalId = setInterval(() => {
+					const currentTime = new Date().getTime();
+					const seconds = Math.floor((currentTime - startTime) / 100) / 10;
+					meta.textContent = `-- Waiting for response (${seconds} seconds)`;
+				}, 100);
+
+				fetch(
+					requestURL, {
+						method: method,
+						headers: {
+							'Authorization': `Bearer ${accessToken}`,
+							'Content-Type': 'application/json',
+							'Accept': 'application/json'
+						}
+					}
+					)
+				.then(response => {
+					let headers = '';
+					for (const [name, value] of response.headers) {
+						headers += '<span class="header-key">' + htmlescape( name ) + '</span>: ';
+						headers += '<span class="header-value">' + htmlescape( value ) + '</span><br/>';
+					}
+					responseHeaders.innerHTML = headers;
+					return response.json();
+				})
+				.then(responseReceived)
+				.catch(responseReceived);
+			}
+		});
+	</script>
+</body>
+
+</html>
