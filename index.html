@@ -8,11 +8,13 @@
 		body {
 			font-family: sans-serif;
 		}
-		.api-endpoint {
+		div.api-endpoint {
 			cursor: pointer;
-			font-weight: bold;
 			color: blue;
 			text-decoration: underline;
+		}
+		#api-endpoints > div {
+			font-weight: bold;
 			margin-bottom: 10px;
 		}
 		summary {
@@ -149,9 +151,19 @@
 	</details>
 
 	<div id="api-endpoints">
-		<h2>API Endpoints</h2>
+		<h2>Endpoints</h2>
 		<div class="api-endpoint">/api/v1/accounts/verify_credentials</div>
+		<div class="api-endpoint">/api/v1/accounts/relationships</div>
 		<div class="api-endpoint">/api/v1/timelines/home</div>
+		<h2>Endpoints with parameters</h2>
+		<div><details><summary>/api/v1/accounts/search</summary>
+			<label for="search-text">Search: </label> <input type="text" id="search-text" name="q" />
+			<button class="api-endpoint" data-endpoint="/api/v1/accounts/search">Search</button>
+		</details></div>
+		<div><details><summary>/api/v2/search</summary>
+			<label for="search-text">Search: </label> <input type="text" id="search-text" name="q" />
+			<button class="api-endpoint" data-endpoint="/api/v2/search">Search</button>
+		</details></div>
 	</div>
 	<h2>Request Log <a href="data:" id="save-request-log">Save</a></h2>
 	<div id="request-log"></div>
@@ -476,22 +488,42 @@
 		document.addEventListener('click', function(event) {
 			if (event.target.classList.contains('api-endpoint')) {
 				const baseURL = document.getElementById('base-url').value.replace(/\/+$/, '');
-				const endpoint = event.target.dataset.endpoint || event.target.textContent;
+				let endpoint = event.target.dataset.endpoint || event.target.textContent;
 				const method = event.target.dataset.method || 'GET';
 				const accessToken = localStorage.getItem('accessToken');
 				const requestURL = `${baseURL}${endpoint}`;
-
-				const log = logRequest( { method, endpoint, baseURL, accessToken } );
-				fetch(
-					requestURL, {
-						method: method,
-						headers: {
-							'Authorization': `Bearer ${accessToken}`,
-							'Content-Type': 'application/json',
-							'Accept': 'application/json'
+				const data = {
+					method,
+					headers: {
+						'Authorization': `Bearer ${accessToken}`,
+						'Content-Type': 'application/json',
+						'Accept': 'application/json'
+					}
+				};
+				if ( event.target.tagName === 'BUTTON' ) {
+					if ( 'POST' === method ) {
+						data.body = {}
+					}
+					const inputs = event.target.closest( 'details' ).querySelectorAll( 'input,select' );
+					const params = new URLSearchParams();
+					for ( let i = 0; i < inputs.length; i++ ) {
+						if ( inputs[i].name ) {
+							if ( 'POST' === method ) {
+								body[inputs[i].name] = inputs[i].value;
+							} else {
+								params.set( inputs[i].name, inputs[i].value );
+							}
 						}
 					}
-					)
+					if ( 'POST' === method ) {
+						data.body = JSON.stringify( body );
+					} else {
+						endpoint += '?' + params.toString();
+					}
+				}
+
+				const log = logRequest( { method, endpoint, baseURL, accessToken } );
+				fetch( requestURL, data )
 				.then(log.receivedHeaders)
 				.then(log.responseReceived)
 				.catch(log.errorReceived);
