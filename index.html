@@ -3,10 +3,17 @@
 
 <head>
 	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Mastodon API Tester</title>
 	<style>
 		body {
 			font-family: sans-serif;
+		}
+		span.note {
+			font-size: .9em;
+		}
+		span.note, span.note a:any-link {
+			color: #999;
 		}
 		div.api-endpoint {
 			cursor: pointer;
@@ -115,12 +122,13 @@
 
 <body>
 	<h1>Mastodon API Tester</h1>
+	<span class="note">This tester was created for the <a href="https://wordpress.org/plugins/enable-mastodon-apps/">Enable Mastodon Apps WordPress plugin</a> but can also be used with any other Mastodon API.</span>
 	<div id="client-data">
 		<label for="base-url">Mastodon Instance:</label>
-		<input type="url" size="50" id="base-url" value="" required/><br/>
+		<input type="url" size="40" id="base-url" value="" placeholder="Enter the URL of your Mastodon API instance" required/><br/>
 
 		<label for="client-name">Test Client Name:</label>
-		<input type="text" size="50" id="client-name" value="Mastodon API Tester" required/>
+		<input type="text" size="40" id="client-name" value="Mastodon API Tester" required/>
 		<br/>
 	</div>
 	<div id="authorization-status"></div>
@@ -129,20 +137,20 @@
 	<details id="detailsblock"><summary>Authorization Data</summary>
 		<div id="authorizaton-data">
 			<label for="redirect-uri">Redirect URI:</label>
-			<input type="text" size="50" id="redirect-uri">
+			<input type="text" size="40" id="redirect-uri">
 			<br/>
 
 			<label for="client-id">Client ID:</label>
-			<input type="text" size="50" id="client-id">
+			<input type="text" size="40" id="client-id">
 			<br/>
 
 			<label for="client-secret">Client Secret:</label>
-			<input type="text" size="50" id="client-secret">
+			<input type="text" size="40" id="client-secret">
 			<button id="get-access-token">Get New Access Token</button>
 			<br/>
 
 			<label for="access-token">Access Token:</label>
-			<input type="text" size="50" id="access-token">
+			<input type="text" size="40" id="access-token">
 			<tt id="access-token-meta"></tt>
 			<br/>
 
