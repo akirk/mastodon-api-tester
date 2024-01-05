@@ -301,6 +301,7 @@
 				document.getElementById('client-id').value = data.client_id;
 				localStorage.setItem('clientSecret', data.client_secret);
 				document.getElementById('client-secret').value = data.client_secret;
+				localStorage.setItem('initialRequestLog', document.getElementById('request-log').innerHTML);
 				setTimeout( function() { authorizeUser(baseURL, data.client_id); }, 1500 );
 			})
 			.catch(log.errorReceived);
@@ -345,7 +346,7 @@
 			.then(data => {
 				const urlParams = new URLSearchParams(window.location.search);
 				urlParams.delete('code');
-				history.replaceState(null, null, `${window.location.pathname}?${urlParams.toString()}`);
+				history.replaceState(null, null, window.location.pathname + ( urlParams.toString() ? '?' + urlParams.toString() : ''));
 
 				if ( ! data.access_token ) {
 					console.error('Error getting access token:', data);
@@ -396,7 +397,7 @@
 				return createApp( baseURL.value, clientName.value );
 			}
 
-			return authorizeUser(baseURL, clientID);
+			return authorizeUser(baseURL.value, clientID);
 		});
 
 		document.getElementById('get-access-token').addEventListener('click', function() {
@@ -420,10 +421,29 @@
 		});
 
 		document.addEventListener('DOMContentLoaded', function() {
+			const urlParams = new URLSearchParams(window.location.search);
+			if ( urlParams.get('error') ) {
+				document.getElementById('authorization-status').style.display = 'block';
+				document.getElementById('authorization-status').textContent = urlParams.get('error_description') + ' (error: ' + urlParams.get('error') + ')';
+
+				urlParams.delete('error_description');
+				urlParams.delete('error');
+				history.replaceState(null, null, window.location.pathname + ( urlParams.toString() ? '?' + urlParams.toString() : '') );
+			}
+
+			const requestLog = document.getElementById('request-log');
+			const initialRequestLog = localStorage.getItem('initialRequestLog');
+			requestLog.innerHTML = initialRequestLog;
+			localStorage.removeItem('initialRequestLog');
+
 			const timestamp = document.createElement('tt');
 			timestamp.className = 'timestamp';
 			timestamp.textContent = '-- Page loaded at ' + new Date().toISOString();
-			document.getElementById('request-log').appendChild( timestamp );
+			if ( requestLog.childNodes.length ) {
+				requestLog.insertBefore( timestamp, requestLog.childNodes[0] );
+			} else {
+				requestLog.appendChild( timestamp );
+			}
 
 			const baseURL = localStorage.getItem('baseURL');
 			const redirectURI = localStorage.getItem('redirectURI');
@@ -437,7 +457,6 @@
 			document.getElementById('access-token').value = accessToken;
 			document.getElementById('access-token-meta').innerHTML = jsonSyntaxHighlight( localStorage.getItem('accessTokenMeta') );
 			if ( baseURL && clientID && clientSecret ) {
-				const urlParams = new URLSearchParams( window.location.search );
 				if ( urlParams.get('code') ) {
 					return getAccessToken( baseURL, clientID, clientSecret, urlParams.get('code') );
 				}
