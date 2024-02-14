@@ -128,7 +128,13 @@
 		<input type="url" size="40" id="base-url" value="" placeholder="Enter the URL of your Mastodon API instance" required/><br/>
 
 		<label for="client-name">Test Client Name:</label>
-		<input type="text" size="40" id="client-name" value="Mastodon API Tester" required/>
+		<input type="text" size="40" id="client-name" value="Mastodon API Tester" required/><br/>
+
+		<label for="client-scopes">Client Scopes:</label>
+		<input type="text" size="40" id="client-scopes" value="read write follow" required/><br/>
+
+		<label for="token-scopes">Token Scopes:</label>
+		<input type="text" size="40" id="token-scopes" value="read write follow" required/><br/>
 		<br/>
 	</div>
 	<div id="authorization-status"></div>
@@ -275,10 +281,12 @@
 			const body = {
 				client_name,
 				redirect_uris: window.location.href,
-				scopes: 'read write follow'
+				scopes: document.getElementById('client-scopes').value,
 			};
 			localStorage.setItem('baseURL', baseURL);
 			localStorage.setItem('redirectURI', window.location.href);
+			localStorage.setItem('clientScopes', document.getElementById('client-scopes').value);
+			localStorage.setItem('tokenScopes', document.getElementById('token-scopes').value);
 			document.getElementById('redirect-uri').value = window.location.href;
 			const endpoint = '/api/v1/apps';
 			const log = logRequest( {baseURL, endpoint, method, body })
@@ -317,8 +325,9 @@
 		}
 
 		function authorizeUser(baseURL, clientID) {
-			const redirectURI = encodeURIComponent(localStorage.getItem('redirectURI') );
-			const authURL = `${baseURL}/oauth/authorize?client_id=${clientID}&redirect_uri=${redirectURI}&response_type=code&scope=read%20write`;
+			const redirectURI = encodeURIComponent( localStorage.getItem('redirectURI') );
+			const tokenScopes = encodeURIComponent( localStorage.getItem('tokenScopes') );
+			const authURL = `${baseURL}/oauth/authorize?client_id=${clientID}&redirect_uri=${redirectURI}&response_type=code&scope=${tokenScopes}`;
 			window.location.href = authURL;
 		}
 
@@ -449,11 +458,15 @@
 			const redirectURI = localStorage.getItem('redirectURI');
 			const clientID = localStorage.getItem('clientID');
 			const clientSecret = localStorage.getItem('clientSecret');
+			const clientScopes = localStorage.getItem('clientScopes') || 'read write follow';
+			const tokenScopes = localStorage.getItem('tokenScopes') || 'read write follow';
 			const accessToken = localStorage.getItem('accessToken');
 			document.getElementById('base-url').value = baseURL;
 			document.getElementById('redirect-uri').value = redirectURI;
 			document.getElementById('client-id').value = clientID;
 			document.getElementById('client-secret').value = clientSecret;
+			document.getElementById('client-scopes').value = clientScopes;
+			document.getElementById('token-scopes').value = tokenScopes;
 			document.getElementById('access-token').value = accessToken;
 			document.getElementById('access-token-meta').innerHTML = jsonSyntaxHighlight( localStorage.getItem('accessTokenMeta') );
 			if ( baseURL && clientID && clientSecret ) {
