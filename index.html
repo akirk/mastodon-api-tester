@@ -10,6 +10,10 @@
 			font-family: sans-serif;
 		}
 
+		a:any-link {
+			color: #098658;
+		}
+
 		p.note {
 			font-size: .9em;
 		}
@@ -42,7 +46,9 @@
 
 		details div {
 			border-left: 3px solid #aaa;
-			padding-left: 1em;
+			padding: 1em;
+			margin-bottom: 1em;
+			line-height: 2.2em;
 		}
 
 		label {
@@ -63,6 +69,15 @@
 			border: 1px solid #ccc;
 			background-color: #f9f9f9;
 			border-radius: 4px;
+		}
+
+		#authorize {
+			margin: 1em 0;
+			padding: .5em 1em;
+			font-size: 1.1em;
+			background-color: #098658;
+			color: white;
+			border-radius: 5px;
 		}
 
 		#authorization-status::before {
@@ -107,6 +122,13 @@
 			margin-bottom: 0;
 		}
 
+		input {
+			font-size: .9em;
+			padding: .3em;
+			border-radius: 2px;
+			border: 1px solid #aaa;
+		}
+
 		.header-key {
 			font-weight: bold;
 		}
@@ -146,54 +168,62 @@
 
 <body>
 	<h1>Mastodon API Tester</h1>
-	<p class="note">This tester was created for the <a href="https://wordpress.org/plugins/enable-mastodon-apps/">Enable
-			Mastodon Apps WordPress plugin</a> but can also be used with any other Mastodon API. It stores anything you
-		enter and/or tokens only in local storage.</p>
-	<div id="client-data">
-		<label for="base-url">Mastodon Server URL:</label>
-		<input type="url" size="40" id="base-url" value="" placeholder="Enter the URL of your Mastodon API instance"
-			required /><br />
+	<p class="note">Test your <a href="https://wordpress.org/plugins/enable-mastodon-apps/">Enable Mastodon Apps
+			WordPress plugin</a> (or any other Mastodon instance). You can also try the <a
+			href="https://akirk.github.io/mastodon-api-tester/">standalone
+			version</a>, or the <a href="https://github.com/akirk/mastodon-api-tester">Github project</a>.</p>
 
-		<label for="client-name">Test Client Name:</label>
-		<input type="text" size="40" id="client-name" value="Mastodon API Tester" required /><br />
-
-		<label for="client-scopes">Client Scopes:</label>
-		<input type="text" size="40" id="client-scopes" value="read write follow" required /><br />
-
-		<label for="token-scopes">Token Scopes:</label>
-		<input type="text" size="40" id="token-scopes" value="read write follow" required /><br />
-		<br />
-	</div>
 	<div id="authorization-status"></div>
-	<button id="authorize">Authorize</button>
-	<input type="reset" id="delete-local" value="Delete Local Storage Data">
+	<button id="authorize">Start the Authorizion Flow</button>
+
+	<details id="client-data">
+		<summary>Edit Settings</summary>
+		<div>
+			<label for="base-url">Mastodon Server URL</label>
+			<input type="url" size="40" id="base-url" value="" placeholder="Enter the URL of your Mastodon API instance"
+				required /><br />
+
+			<label for="client-name">Test Client Name</label>
+			<input type="text" size="40" id="client-name" value="Mastodon API Tester" required /><br />
+
+			<label for="client-scopes">Client Scopes</label>
+			<input type="text" size="40" id="client-scopes" value="read write follow" required /><br />
+
+			<label for="token-scopes">Token Scopes</label>
+			<input type="text" size="40" id="token-scopes" value="read write follow" required /><br />
+			<br />
+			<input type="reset" id="delete-local" value="Clear all data">
+		</div>
+	</details>
+
 	<details id="detailsblock">
 		<summary>Authorization Data</summary>
 		<div id="authorizaton-data">
-			<label for="redirect-uri">Redirect URI:</label>
+			<label for="redirect-uri">Redirect URI</label>
 			<input type="text" size="40" id="redirect-uri">
 			<br />
 
-			<label for="client-id">Client ID:</label>
+			<label for="client-id">Client ID</label>
 			<input type="text" size="40" id="client-id">
 			<br />
 
-			<label for="client-secret">Client Secret:</label>
+			<label for="client-secret">Client Secret</label>
 			<input type="text" size="40" id="client-secret">
 			<button id="get-access-token">Get New Access Token</button>
 			<br />
 
-			<label for="access-token">Access Token:</label>
+			<label for="access-token">Access Token</label>
 			<input type="text" size="40" id="access-token">
 			<tt id="access-token-meta"></tt>
 			<br />
 
-			<input type="reset" id="reset"> <input type="reset" id="delete-local" value="Delete Local Storage Data">
+			<input type="reset" id="reset"> <input type="reset" id="delete-local" value="Clear all data">
 		</div>
 	</details>
 
 	<div id="api-endpoints">
 		<h2>Endpoints</h2>
+		<p>Clicking these will send a request to the API and display the response in the box below.</p>
 		<div class="api-endpoint">/api/v1/accounts/verify_credentials</div>
 		<div class="api-endpoint">/api/v1/accounts/relationships</div>
 		<div class="api-endpoint">/api/v1/timelines/home</div>
@@ -355,7 +385,7 @@
 		}
 
 		function isAuthorized() {
-			document.getElementById('detailsblock').insertBefore(document.getElementById('client-data'), document.getElementById('authorizaton-data'));
+			// document.getElementById('detailsblock').insertBefore(document.getElementById('client-data'), document.getElementById('authorizaton-data'));
 			document.getElementById('api-endpoints').style.display = 'block';
 			document.getElementById('authorization-status').style.display = 'block';
 			document.getElementById('detailsblock').style.display = 'block';
@@ -432,6 +462,7 @@
 				baseURL.value = 'https://' + baseURL.value;
 			}
 			if (!baseURL.checkValidity()) {
+				document.getElementById('client-data').setAttribute('open', 'open');
 				baseURL.reportValidity();
 				return;
 			}
@@ -493,7 +524,7 @@
 				requestLog.appendChild(timestamp);
 			}
 
-			const baseURL = localStorage.getItem('baseURL');
+			const baseURL = localStorage.getItem('baseURL') || urlParams.get('url') || '';
 			const redirectURI = localStorage.getItem('redirectURI');
 			const clientID = localStorage.getItem('clientID');
 			const clientSecret = localStorage.getItem('clientSecret');
