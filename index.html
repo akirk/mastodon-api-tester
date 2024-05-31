@@ -374,6 +374,10 @@
 					if (!data) {
 						return;
 					}
+					if (data.error) {
+						alert('Unable to create the app: ' + data.error_description);
+						return;
+					}
 					localStorage.setItem('clientID', data.client_id);
 					document.getElementById('client-id').value = data.client_id;
 					localStorage.setItem('clientSecret', data.client_secret);
