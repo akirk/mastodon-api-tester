@@ -404,7 +404,8 @@
 			document.getElementById('api-endpoints').style.display = 'block';
 			document.getElementById('authorization-status').style.display = 'block';
 			document.getElementById('detailsblock').style.display = 'block';
-			document.getElementById('authorization-status').textContent = 'Authorized.';
+			document.getElementById('authorization-status').textContent = 'Authorized with ' + localStorage.getItem('baseURL');
+
 			document.getElementById('authorize').textContent = 'Re-Authorize';
 		}
 
