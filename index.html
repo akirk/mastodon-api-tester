@@ -133,6 +133,9 @@
 			border-radius: 2px;
 			border: 1px solid #aaa;
 		}
+		input#api-custom-endpoint {
+			width: 40em;
+		}
 		button#send-api-custom-endpoint {
 			font-size: .9em;
 			padding: .2em;
@@ -232,7 +235,7 @@
 			<tt id="access-token-meta"></tt>
 			<br />
 
-			<input type="reset" id="reset"> <input type="reset" id="delete-local" value="Clear all data">
+			<input type="reset" id="reset"> <input type="reset" id="delete-local2" value="Clear all data">
 		</div>
 	</details>
 
@@ -509,6 +512,10 @@
 			location.reload();
 		});
 
+		document.getElementById('delete-local2').addEventListener('click', function () {
+			localStorage.clear();
+			location.reload();
+		});
 
 		document.getElementById('reset').addEventListener('click', function () {
 			document.getElementById('client-data').style.display = 'block';
@@ -541,7 +548,7 @@
 			const customEndpoints = JSON.parse( localStorage.getItem( 'customEndpoints' ) ) || [];
 			if ( ! customEndpoints.length ) {
 				customEndpoints.push( '/api/v1/accounts/verify_credentials' );
-				customEndpoints.push( '/api/v1/accounts/relationships' );
+				customEndpoints.push( '/api/v1/accounts/relationships?id[]=alex@alex.kirk.at' );
 				customEndpoints.push( '/api/v1/timelines/home' );
 				customEndpoints.push( '/api/v1/notifications' );
 				localStorage.setItem( 'customEndpoints', JSON.stringify( customEndpoints ) );
@@ -692,6 +699,7 @@
 					return;
 				}
 				endpoint = event.target.dataset.endpoint || event.target.textContent;
+				document.getElementById('api-custom-endpoint').value = endpoint;
 				method = event.target.dataset.method || 'GET';
 				if ( event.target.tagName === 'BUTTON' ) {
 					submitValues = true;
