@@ -635,6 +635,9 @@
 				}
 			} else if (event.target.id === 'send-api-custom-endpoint') {
 				endpoint = document.getElementById('api-custom-endpoint').value;
+				if ( '/' !== endpoint.substr( 0 ) ) {
+					endpoint = '/' + endpoint;
+				}
 				method = 'GET';
 			}
 
